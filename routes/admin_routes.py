@@ -1,5 +1,4 @@
-from pathlib import Path
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Path, Request, Response
 from fastapi.responses import JSONResponse
 
 from dtos.alterar_pedido_dto import AlterarPedidoDto
@@ -27,13 +26,11 @@ async def inserir_produto(inputDto: InserirProdutoDTO) -> Produto:
     novo_produto = ProdutoRepo.inserir(novo_produto)
     return novo_produto
 
-
 @router.post("/excluir_produto", status_code=204)
 async def excluir_produto(inputDto: IdProdutoDto):
     if ProdutoRepo.excluir(inputDto.id_produto): return None
-    pd = ProblemDetailsDto("int", f"O produto com id {inputDto.id_produto} não foi encontrado.", "value_not_found", ["body", "id_produto"])
+    pd = ProblemDetailsDto("int", f"O produto com id <b>{inputDto.id_produto}</b> não foi encontrado.", "value_not_found", ["body", "id_produto"])
     return JSONResponse(pd.to_dict(), status_code=404)
-
 
 @router.get("/obter_produto/{id_produto}")
 async def obter_produto(id_produto: int = Path(..., title="Id do Produto", ge=1)):
@@ -42,29 +39,27 @@ async def obter_produto(id_produto: int = Path(..., title="Id do Produto", ge=1)
     pd = ProblemDetailsDto("int", f"O produto com id <b>{id_produto}</b> não foi encontrado.", "value_not_found", ["body", "id_produto"])
     return JSONResponse(pd.to_dict(), status_code=404)
 
-
 @router.post("/alterar_produto", status_code=204)
 async def alterar_produto(inputDto: AlterarProdutoDTO):
-    produto = Produto(None, inputDto.nome, inputDto.preco, inputDto.descricao, inputDto.estoque)
+    produto = Produto(inputDto.id, inputDto.nome, inputDto.preco, inputDto.descricao, inputDto.estoque)
     if ProdutoRepo.alterar(produto): return None
-    pd = ProblemDetailsDto("int", f"O produto com id {inputDto.id} não foi encontrado.", "value_not_found", ["body", "id_produto"])
+    pd = ProblemDetailsDto("int", f"O produto com id <b>{inputDto.id}</b> não foi encontrado.", "value_not_found", ["body", "id"])
     return JSONResponse(pd.to_dict(), status_code=404)
-
 
 @router.post("/alterar_pedido", status_code=204)
 async def alterar_pedido(inputDto: AlterarPedidoDto):
     if PedidoRepo.alterar_estado(inputDto.id, inputDto.estado.value): return None
-    pd = ProblemDetailsDto("int", f"O produto com id {inputDto.id} não foi encontrado.", "value_not_found", ["body", "id_produto"])
+    pd = ProblemDetailsDto("int", f"O pedido com id <b>{inputDto.id}</b> não foi encontrado.", "value_not_found", ["body", "id"])
     return JSONResponse(pd.to_dict(), status_code=404)
 
 @router.get("/obter_pedido/{id_pedido}")
-async def obter_pedido(id_pedido: int = Path(..., title = "Id do Pedido", ge=1)):
+async def obter_pedido(id_pedido: int = Path(..., title="Id do Pedido", ge=1)):
     pedido = PedidoRepo.obter_por_id(id_pedido)
-    if not pedido: return None
-    pd = ProblemDetailsDto("int", f"O produto com id {id_pedido} não foi encontrado.", "value_not_found", ["body", "id_produto"])
+    if pedido: return pedido
+    pd = ProblemDetailsDto("int", f"O pedido com id <b>{id_pedido}</b> não foi encontrado.", "value_not_found", ["body", "id"])
     return JSONResponse(pd.to_dict(), status_code=404)
 
 @router.get("/obter_pedidos_por_estado/{estado}")
-async def obter_pedidos(estado: EstadoPedido = Path(..., title = "Estado do Pedido")):
-    pedidos = PedidoRepo.obter_todos_estado(estado.value)
+async def obter_pedidos_por_estado(estado: EstadoPedido = Path(..., title="Estado do Pedido")):
+    pedidos = PedidoRepo.obter_todos_por_estado(estado.value)
     return pedidos
